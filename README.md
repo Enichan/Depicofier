@@ -4,6 +4,8 @@ Converts/translates PICO-8 style Lua syntax to standard clean Lua syntax. Downlo
 
 This tool uses a [publicly available and well-tested Lua language grammar](https://github.com/antlr/grammars-v4/tree/master/lua) to parse PICO-8 source code, so that any enhanced or special syntax or shorthand will only be converted where it should be.
 
+If you like this tool please consider kicking me a dollar [on Patreon](https://www.patreon.com/sharkhugseniko).
+
 # Usage
 
 ```
