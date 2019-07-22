@@ -1,6 +1,6 @@
 # Depicofier
 
-Converts/translates PICO-8 style Lua syntax to standard clean Lua syntax.
+Converts/translates PICO-8 style Lua syntax to standard clean Lua syntax. Download the [latest release](https://github.com/Enichan/Depicofier/releases) here.
 
 This tool uses a [publicly available and well-tested Lua language grammar](https://github.com/antlr/grammars-v4/tree/master/lua) to parse PICO-8 source code, so that any enhanced or special syntax or shorthand will only be converted where it should be.
 
