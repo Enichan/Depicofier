@@ -96,6 +96,18 @@ namespace Depicofier {
             }
         }
 
+        public virtual void EnterOperatorMulDivMod([NotNull] ParserRuleContext context) {
+            if (context.GetText() == "\\") {
+                Replacements.Push(
+                    new Replacement(
+                        context.start.StartIndex,
+                        context.stop.StopIndex,
+                        "//"
+                    )
+                );
+            }
+        }
+
         public void EnterNumber([NotNull] ParserRuleContext context) {
             var literal = context.GetText().ToLowerInvariant();
             if (literal.StartsWith("0b")) {

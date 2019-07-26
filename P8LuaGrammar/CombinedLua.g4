@@ -54,6 +54,7 @@ Modified for Pico 8 syntax by Eniko - https://github.com/enichan
 // - != operator alias for ~=
 // - '?' shorthand for print (though only at the start of a line)
 // - binary number literals 0b11010101.101010
+// - integer division now uses \ instead of // (which indicates a comment in pico 8)
 //
 // not implemented:
 // - single line if: 'if' '(' exp ')' block ('else' block)? followed by line end
@@ -223,8 +224,9 @@ operatorStrcat
 operatorAddSub
 	: '+' | '-';
 
+// changed the // operator to \ so it doesn't conflict with pico 8 alternative comment syntax
 operatorMulDivMod
-	: '*' | '/' | '%' | '//';
+	: '*' | '/' | '%' | '\\';
 
 operatorBitwise
 	: '&' | '|' | '~' | '<<' | '>>';
