@@ -1,5 +1,17 @@
 print("hello world") -- hi!
 
+--[[
+?"this is a comment"
+]]
+
+---[[
+?"this is not a comment"
+--]]
+
+aString = "this is a multi-line\
+?'this is inside a string'\
+single-line string"
+
 someGlob = {
     value = 3
 } -- this is a comment

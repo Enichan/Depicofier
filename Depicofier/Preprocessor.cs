@@ -8,8 +8,71 @@ using System.Threading.Tasks;
 
 namespace Depicofier {
     public static class Preprocessor {
+        public static string Process(string source, bool strictMode) {
+            var input = new AntlrInputStream(source);
+            var lexer = strictMode ? (Lexer)new P8LuaLexer(input) : new CombinedLuaLexer(input);
+            lexer.RemoveErrorListeners();
+
+            var tokenStream = new CommonTokenStream(lexer);
+            tokenStream.Fill();
+            var tokens = tokenStream.GetTokens().ToList();
+
+            var skipRanges = new List<Tuple<int, int>>();
+
+            // skip comments and strings
+            for (int i = 0; i < tokens.Count; i++) {
+                var token = tokens[i];
+                var typeName = lexer.Vocabulary.GetSymbolicName(token.Type);
+
+                if (typeName == "NORMALSTRING" || typeName == "CHARSTRING" || typeName == "LONGSTRING" || typeName == "COMMENT" || typeName == "LINE_COMMENT" || typeName == "ALT_COMMENT") {
+                    var text = token.Text;
+                    var stopIndex = token.StopIndex;
+                    var index = stopIndex - token.StartIndex;
+
+                    while (index > 0 && text[index] == '\r' || text[index] == '\n') {
+                        index--;
+                        stopIndex--;
+                    }
+
+                    skipRanges.Add(new Tuple<int, int>(token.StartIndex, stopIndex));
+                }
+            }
+
+            var lines = new List<string>();
+            var startIndex = 0;
+
+            for (int i = 0; i < source.Length; i++) {
+                if (skipRanges.Count > 0 && i >= skipRanges[0].Item1 && i <= skipRanges[0].Item2) {
+                    i = skipRanges[0].Item2;
+                    skipRanges.RemoveAt(0);
+                    continue;
+                }
+
+                var c = source[i];
+                if (c == '\r' || c == '\n') {
+                    lines.Add(source.Substring(startIndex, i - startIndex));
+
+                    if (c == '\r' && i + 1 < source.Length && source[i + 1] == '\n') {
+                        i++;
+                    }
+
+                    startIndex = i + 1;
+                }
+            }
+
+            if (source.Length - startIndex > 0) {
+                lines.Add(source.Substring(startIndex));
+            }
+
+            return Process(lines, strictMode);
+        }
+
         public static string Process(string[] lines, bool strictMode) {
-            for (int i = 0; i < lines.Length; i++) {
+            return Process(lines.ToList(), strictMode);
+        }
+
+        public static string Process(List<string> lines, bool strictMode) { 
+            for (int i = 0; i < lines.Count; i++) {
                 var line = lines[i];
                 var processed = ProcessLine(line, strictMode);
                 lines[i] = processed;
@@ -20,6 +83,8 @@ namespace Depicofier {
         private static string ProcessLine(string line, bool strictMode) {
             var input = new AntlrInputStream(line);
             var lexer = strictMode ? (Lexer)new P8LuaLexer(input) : new CombinedLuaLexer(input);
+            lexer.RemoveErrorListeners();
+
             var tokenStream = new CommonTokenStream(lexer);
             tokenStream.Fill();
             var tokens = tokenStream.GetTokens().ToList();

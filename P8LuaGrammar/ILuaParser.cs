@@ -8,5 +8,6 @@ using System.Threading.Tasks;
 namespace P8LuaGrammar {
     public interface ILuaParser {
         ParserRuleContext Chunk();
+        void RemoveErrorListeners();
     }
 }

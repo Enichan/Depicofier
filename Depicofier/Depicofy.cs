@@ -12,14 +12,16 @@ namespace Depicofier {
         private static string Clean(string source, Action<string> log, bool strictMode) {
             log("Strict mode: " + strictMode);
             log("Preprocessing if and print shorthand syntax...");
-            var lines = source.Split(new string[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
-            var processed = Preprocessor.Process(lines, strictMode);
+            var processed = Preprocessor.Process(source, strictMode);
 
             log("Lexing and parsing source...");
             var input = new AntlrInputStream(processed);
             var lexer = strictMode ? (Lexer)new P8LuaLexer(input) : new CombinedLuaLexer(input);
+            lexer.RemoveErrorListeners();
+
             var tokens = new CommonTokenStream(lexer);
             var parser = strictMode ? (ILuaParser)new P8LuaParser(tokens) : new CombinedLuaParser(tokens);
+            parser.RemoveErrorListeners();
 
             log("Processing remaining enhanced syntax...");
             var context = parser.Chunk();
