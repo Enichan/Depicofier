@@ -26,5 +26,10 @@ namespace Depicofier {
         public override void EnterOperatorMulDivMod([NotNull] CombinedLuaParser.OperatorMulDivModContext context) {
             Parent.EnterOperatorMulDivMod(context);
         }
+
+        public override void EnterOperatorBitwise([NotNull] CombinedLuaParser.OperatorBitwiseContext context) {
+            Parent.EnterOperatorBitwise(context);
+        }
+
     }
 }

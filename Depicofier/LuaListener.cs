@@ -13,6 +13,7 @@ namespace Depicofier {
     public class LuaListener {
         private ICharStream input;
         private string source;
+        private bool justCompoundStatements;
 
         public LuaListener(ILuaListener listener, ICharStream input, string source)
             : base() {
@@ -22,11 +23,28 @@ namespace Depicofier {
             Listener.Parent = this;
         }
 
-        public string ReplaceAll([NotNull] ParserRuleContext context) {
+        public string ReplaceCompoundStatements([NotNull] ParserRuleContext context)
+        {
+            justCompoundStatements = true;
             GetReplacements(context);
 
             var newSource = source;
-            while (Replacements.Count > 0) {
+            while (Replacements.Count > 0)
+            {
+                var replacement = Replacements.Pop();
+                newSource = replacement.Replace(newSource);
+            }
+            return newSource;
+        }
+
+        public string ReplaceRemaining([NotNull] ParserRuleContext context)
+        {
+            justCompoundStatements = false;
+            GetReplacements(context);
+
+            var newSource = source;
+            while (Replacements.Count > 0)
+            {
                 var replacement = Replacements.Pop();
                 newSource = replacement.Replace(newSource);
             }
@@ -53,21 +71,7 @@ namespace Depicofier {
             var opAssign = GetText(context.children[1]);
             var rhs = GetText(context.children[2]);
 
-            string op;
-
-            switch (opAssign[0]) {
-                default:
-                    throw new InvalidOperationException(
-                        string.Format("Invalid operator in compound statement '{0}' on line {1}", opAssign, context.start.Line)
-                    );
-                case '+':
-                case '-':
-                case '*':
-                case '/':
-                case '%':
-                    op = opAssign.Substring(0, 1);
-                    break;
-            }
+            string op = opAssign.Substring(0,opAssign.Length-1);
 
             var node = context.children[2];
             while (node.ChildCount == 1) {
@@ -84,7 +88,59 @@ namespace Depicofier {
             );
         }
 
+        public virtual void EnterOperatorBitwise([NotNull] ParserRuleContext context)
+        {
+            if (justCompoundStatements) return;
+
+            ParserRuleContext parent = (ParserRuleContext)context.Parent;
+            if (parent.ChildCount == 3)
+            {
+                ParserRuleContext binOp = (ParserRuleContext)parent.GetChild(1);
+                string binOpString = GetText(binOp);
+
+                string lhs = GetText(parent.GetChild(0));
+                string rhs = GetText(parent.GetChild(2));
+                string replacementText = "";
+
+                switch (binOpString)
+                {
+                    case ">>":
+                        replacementText = string.Format("bin32.arshift( {0}, {1} )", lhs, rhs);
+                        break;
+                    case ">>>":
+                        replacementText = string.Format("bin32.rshift( {0}, {1} )", lhs, rhs);
+                        break;
+                    case "<<>":
+                        replacementText = string.Format("bin32.lrotate( {0}, {1} )", lhs, rhs);
+                        break;
+                    case ">><":
+                        replacementText = string.Format("bin32.rrotate( {0}, {1} )", lhs, rhs);
+                        break;
+                }
+
+                if(replacementText != "")
+                {
+                    //Console.WriteLine("" + parent.start.StartIndex + "-->" +parent.stop.StopIndex);
+                    //Console.WriteLine("Replacing \'" + GetText(parent) + "\' with \'" + replacementText + "\'");
+                    Replacements.Push(
+                        new Replacement(
+                            parent.start.StartIndex,
+                            parent.stop.StopIndex,
+                            replacementText
+                        )
+                    );
+                }
+
+                //Console.WriteLine(  GetText(parent.GetChild(0)) + ":" +
+                //    GetText(parent.GetChild(1)) + ":" +
+                //    GetText(parent.GetChild(2))
+                //);
+            }
+        }
+
         public virtual void EnterOperatorComparison([NotNull] ParserRuleContext context) {
+            if (justCompoundStatements) return;
+
             if (context.GetText() == "!=") {
                 Replacements.Push(
                     new Replacement(
@@ -97,6 +153,8 @@ namespace Depicofier {
         }
 
         public virtual void EnterOperatorMulDivMod([NotNull] ParserRuleContext context) {
+            if (justCompoundStatements) return;
+
             if (context.GetText() == "\\") {
                 Replacements.Push(
                     new Replacement(
@@ -109,6 +167,8 @@ namespace Depicofier {
         }
 
         public void EnterNumber([NotNull] ParserRuleContext context) {
+            if (justCompoundStatements) return;
+
             var literal = context.GetText().ToLowerInvariant();
             if (literal.StartsWith("0b")) {
                 var tokens = literal.Substring(2).Split(new char[] { '.' }, StringSplitOptions.None);

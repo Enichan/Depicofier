@@ -13,23 +13,42 @@ namespace Depicofier {
             log("Strict mode: " + strictMode);
             log("Preprocessing if and print shorthand syntax...");
             var processed = Preprocessor.Process(source, strictMode);
+            var pass1Cleaned = "";
+            var pass2Cleaned = "";
+            {
+                log("Pass 1: Lexing and parsing source...");
+                var input = new AntlrInputStream(processed);
+                var lexer = strictMode ? (Lexer)new P8LuaLexer(input) : new CombinedLuaLexer(input);
+                lexer.RemoveErrorListeners();
 
-            log("Lexing and parsing source...");
-            var input = new AntlrInputStream(processed);
-            var lexer = strictMode ? (Lexer)new P8LuaLexer(input) : new CombinedLuaLexer(input);
-            lexer.RemoveErrorListeners();
+                var tokens = new CommonTokenStream(lexer);
+                var parser = strictMode ? (ILuaParser)new P8LuaParser(tokens) : new CombinedLuaParser(tokens);
+                parser.RemoveErrorListeners();
 
-            var tokens = new CommonTokenStream(lexer);
-            var parser = strictMode ? (ILuaParser)new P8LuaParser(tokens) : new CombinedLuaParser(tokens);
-            parser.RemoveErrorListeners();
+                log("Pass 1: Processing compound statements...");
+                var context = parser.Chunk();
+                var listener = new LuaListener(strictMode ? (ILuaListener)new ConcreteP8LuaListener() : (ILuaListener)new ConcreteCombinedLuaListener(), input, processed);
+                pass1Cleaned = listener.ReplaceCompoundStatements(context);
+            }
 
-            log("Processing remaining enhanced syntax...");
-            var context = parser.Chunk();
-            var listener = new LuaListener(strictMode ? (ILuaListener)new ConcreteP8LuaListener() : (ILuaListener)new ConcreteCombinedLuaListener(), input, processed);
-            var cleaned = listener.ReplaceAll(context);
+            {
+                log("Pass 2: Lexing and parsing source...");
+                var input = new AntlrInputStream(pass1Cleaned);
+                var lexer = strictMode ? (Lexer)new P8LuaLexer(input) : new CombinedLuaLexer(input);
+                lexer.RemoveErrorListeners();
+
+                var tokens = new CommonTokenStream(lexer);
+                var parser = strictMode ? (ILuaParser)new P8LuaParser(tokens) : new CombinedLuaParser(tokens);
+                parser.RemoveErrorListeners();
+
+                log("Processing remaining enhanced syntax...");
+                var context = parser.Chunk();
+                var listener = new LuaListener(strictMode ? (ILuaListener)new ConcreteP8LuaListener() : (ILuaListener)new ConcreteCombinedLuaListener(), input, pass1Cleaned);
+                pass2Cleaned = listener.ReplaceRemaining(context);
+            }
 
             log("Done");
-            return cleaned;
+            return pass2Cleaned;
         }
 
         public static string Clean(string source, bool strictMode) {
