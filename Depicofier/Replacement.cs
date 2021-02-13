@@ -27,6 +27,7 @@ namespace Depicofier {
                 endStr = source.Substring(end, source.Length - end);
             }
             if (Length > 0) {
+                //Console.WriteLine("appending \'" + Text + "\'");
                 str.Append(Text);
             }
             if (endStr != null) {
